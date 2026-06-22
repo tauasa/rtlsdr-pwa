@@ -2,6 +2,8 @@
 
 A browser port of the [rtlsdr-fx](https://github.com/tauasa/rtlsdr-fx) desktop receiver: live **spectrum**, scrolling **waterfall**, and **WFM / NFM / AM audio**, all decoded in pure JavaScript. Installable as a Progressive Web App and fully usable offline in Simulated mode.
 
+![Screenshot](screenshot.png)
+
 ## Two sources
 
 Browsers can't open raw TCP sockets, so the app mirrors the desktop's two sources in a browser-native way:
