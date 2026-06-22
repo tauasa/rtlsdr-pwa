@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>rtlsdr-pwa — web receiver</title>
+  <meta name="description" content="A lightweight RTL-SDR receiver with live spectrum, waterfall, and audio — in the browser." />
+  <meta name="theme-color" content="#0b0e14" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <span class="title">rtlsdr <span class="fx">pwa</span></span>
+      <span class="sub">web receiver</span>
+    </div>
+    <div class="appbar-actions">
+      <button id="installBtn" class="ghost" hidden>Install</button>
+      <button id="settingsBtn" class="ghost">Settings</button>
+      <button id="aboutBtn" class="ghost">About</button>
+    </div>
+  </header>
+
+  <section class="toolbar" aria-label="Receiver controls">
+    <label class="field">
+      <span>Source</span>
+      <select id="sourceSel">
+        <option value="sim" selected>Simulated</option>
+        <option value="ws">RTL-TCP (WebSocket)</option>
+      </select>
+    </label>
+    <label class="field" id="wsRow">
+      <span>Bridge URL</span>
+      <input id="wsUrl" type="text" value="ws://localhost:8073" spellcheck="false" />
+    </label>
+    <label class="field">
+      <span>Freq (MHz)</span>
+      <input id="freq" type="text" value="100.0000" inputmode="decimal" spellcheck="false" />
+    </label>
+    <label class="field">
+      <span>Rate (sps)</span>
+      <select id="rate">
+        <option value="250000">250 k</option>
+        <option value="300000" selected>300 k</option>
+        <option value="960000">960 k</option>
+        <option value="1024000">1.024 M</option>
+        <option value="1536000">1.536 M</option>
+        <option value="2048000">2.048 M</option>
+        <option value="2400000">2.4 M</option>
+      </select>
+    </label>
+    <label class="field check">
+      <span>Gain</span>
+      <span class="inline"><input id="autoGain" type="checkbox" checked /><label for="autoGain" class="cap">auto</label></span>
+    </label>
+    <label class="field">
+      <span>Manual (dB)</span>
+      <input id="gain" type="range" min="0" max="49.6" step="0.1" value="20" />
+    </label>
+    <label class="field">
+      <span>Mode</span>
+      <select id="mode">
+        <option value="WFM" selected>Wideband FM</option>
+        <option value="NFM">Narrowband FM</option>
+        <option value="AM">AM</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>Volume</span>
+      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.6" />
+    </label>
+    <div class="field btns">
+      <span>&nbsp;</span>
+      <span class="inline">
+        <button id="audioBtn" class="toggle">Audio</button>
+        <button id="connectBtn" class="primary">Connect</button>
+      </span>
+    </div>
+  </section>
+
+  <main class="scope">
+    <div class="pane spectrum-pane">
+      <canvas id="spectrum"></canvas>
+      <span class="pane-tag">spectrum</span>
+    </div>
+    <div class="pane waterfall-pane">
+      <canvas id="waterfall"></canvas>
+      <span class="pane-tag">waterfall</span>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span id="status">Ready. Pick a source and Connect. Simulated needs no hardware.</span>
+    <span id="readout" class="readout"></span>
+  </footer>
+
+  <!-- Settings -->
+  <div id="settingsModal" class="modal">
+    <div class="card" role="dialog" aria-modal="true" aria-label="Settings">
+      <h2>Display</h2>
+      <div class="setting">
+        <label for="paletteSel">Waterfall palette</label>
+        <div class="palette-wrap">
+          <select id="paletteSel">
+            <option>Classic</option><option>Inferno</option><option>Ice</option>
+            <option>Green (CRT)</option><option>Grayscale</option>
+          </select>
+          <canvas id="palettePreview" width="220" height="16"></canvas>
+        </div>
+      </div>
+      <div class="setting">
+        <label for="traceColor">Spectrum trace</label>
+        <input id="traceColor" type="color" value="#50c8ff" />
+      </div>
+      <div class="setting">
+        <label for="peakColor">Spectrum peak hold</label>
+        <input id="peakColor" type="color" value="#5f697d" />
+      </div>
+      <div class="setting">
+        <label for="minDb">Floor (dB)</label>
+        <input id="minDb" type="range" min="-140" max="-40" step="1" value="-100" />
+      </div>
+      <div class="setting">
+        <label for="maxDb">Ceiling (dB)</label>
+        <input id="maxDb" type="range" min="-30" max="20" step="1" value="0" />
+      </div>
+      <div class="card-actions">
+        <button id="resetColors" class="ghost">Reset to defaults</button>
+        <button id="settingsClose" class="primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <div id="aboutModal" class="modal">
+    <div class="card" role="dialog" aria-modal="true" aria-label="About">
+      <h2 class="about-name">rtlsdr·pwa</h2>
+      <p class="about-tag">Lightweight RTL-SDR receiver — spectrum, waterfall &amp; audio, in the browser.</p>
+      <p class="about-meta">RTLSDR Progressive Web App · Version 1.0.0</p>
+      <p class="about-meta">Copyright © 2026 Tauasa Timoteo · MIT License</p>
+      <p><a id="repoLink" class="link" target="_blank" rel="noopener">repository</a></p>
+      <p class="about-note">Browsers can't open raw TCP, so real hardware streams via a
+        <code>websockify</code> bridge to <code>rtl_tcp</code>. The Simulated source runs entirely in your browser.</p>
+      <div class="card-actions">
+        <button id="aboutClose" class="primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

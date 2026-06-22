@@ -1,0 +1,168 @@
+/*
+ * rtlsdr-pwa styles — dark SDR console, carried over from the desktop app.
+ * Copyright (c) 2026 Tauasa Timoteo. MIT License.
+ */
+:root {
+  --bg: #0b0e14;
+  --bg-scope: #0a0d13;
+  --panel: #11151f;
+  --panel-2: #141926;
+  --border: #1d2230;
+  --text: #e6ecf5;
+  --muted: #7f8aa0;
+  --muted-2: #5b6678;
+  --accent: #50c8ff;
+  --accent-dim: #2a7fa8;
+  --marker: #ffb454;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ---- app bar ---- */
+.appbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.logo {
+  width: 18px; height: 18px; border-radius: 4px; align-self: center;
+  background:
+    linear-gradient(0deg, #ff3c1e, #ffd024 40%, #18d36e 60%, #0a78d2 80%, #06122a);
+  box-shadow: 0 0 0 1px #00000055 inset;
+}
+.title { font-weight: 700; letter-spacing: 0.5px; font-size: 18px; }
+.title .fx { color: var(--accent); font-weight: 600; }
+.sub {
+  font-family: var(--mono); font-size: 11px; color: var(--muted-2);
+  text-transform: uppercase; letter-spacing: 2px;
+}
+.appbar-actions { display: flex; gap: 8px; }
+
+/* ---- buttons ---- */
+button {
+  font-family: var(--sans); font-size: 13px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 12px; cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s;
+}
+button:hover { border-color: #2a3142; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ghost { background: transparent; }
+.primary { background: var(--accent-dim); border-color: #3a93c0; color: #eaf6ff; }
+.primary:hover { background: #2f8fbb; }
+.toggle.active, .primary.active { background: var(--accent); border-color: var(--accent); color: #04141f; font-weight: 600; }
+
+/* ---- toolbar ---- */
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > span { font-size: 10px; letter-spacing: .6px; color: var(--muted); text-transform: uppercase; }
+.field .cap { font-size: 12px; color: var(--text); text-transform: none; letter-spacing: 0; }
+.inline { display: flex; align-items: center; gap: 8px; height: 32px; }
+.field.btns .inline { gap: 8px; }
+
+select, input[type="text"] {
+  font-family: var(--mono); font-size: 13px; color: var(--text);
+  background: var(--bg-scope); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 8px; height: 32px;
+}
+select:focus, input:focus { outline: none; border-color: var(--accent-dim); }
+#wsUrl { min-width: 200px; }
+#freq { width: 110px; }
+
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 140px; height: 4px;
+  background: #232a39; border-radius: 3px; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: 0;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 0;
+}
+input[type="range"]:disabled { opacity: .4; }
+input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+input[type="color"] {
+  width: 48px; height: 30px; padding: 2px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg-scope); cursor: pointer;
+}
+
+/* ---- scope (spectrum + waterfall) ---- */
+.scope { display: grid; grid-template-rows: 42fr 58fr; min-height: 0; }
+.pane { position: relative; min-height: 0; background: var(--bg-scope); }
+.spectrum-pane { border-bottom: 1px solid var(--border); }
+.pane canvas { width: 100%; height: 100%; display: block; }
+.pane-tag {
+  position: absolute; top: 8px; right: 10px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted-2);
+  pointer-events: none; user-select: none;
+}
+
+/* ---- status bar ---- */
+.statusbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 7px 14px; background: var(--panel); border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--muted);
+}
+.readout { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+
+/* ---- modals ---- */
+.modal {
+  position: fixed; inset: 0; display: none; place-items: center;
+  background: #05070bcc; backdrop-filter: blur(2px); z-index: 20; padding: 16px;
+}
+.modal.open { display: grid; }
+.card {
+  width: min(440px, 100%); background: var(--panel);
+  border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  box-shadow: 0 18px 50px #00000080;
+}
+.card h2 { margin: 0 0 14px; font-size: 16px; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.setting label { color: #c7cedb; font-size: 13px; }
+.palette-wrap { display: flex; align-items: center; gap: 10px; }
+#palettePreview { border: 1px solid var(--border); border-radius: 4px; display: block; }
+.card-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.about-name { font-size: 24px; margin-bottom: 4px; }
+.about-name + .about-tag { color: var(--muted); margin: 0 0 14px; }
+.about-meta { color: #c7cedb; font-size: 13px; margin: 4px 0; }
+.about-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 14px; }
+.about-note code { font-family: var(--mono); color: var(--accent); }
+.link { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .sub { display: none; }
+  #wsUrl { min-width: 150px; }
+  input[type="range"] { width: 110px; }
+  .readout { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
