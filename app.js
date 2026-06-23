@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const REPO_URL = 'https://github.com/tauasa/rtlsdr-fx';
+const REPO_URL = 'https://github.com/tauasa/rtlsdr-pwa';
 
 // ---- waterfall palettes (mirrors the desktop Palette presets) ----
 const PALETTES = {
