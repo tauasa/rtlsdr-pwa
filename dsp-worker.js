@@ -83,6 +83,7 @@ function maybeSpectrum(iqBlock) {
 // faint CW carriers for visual interest and a low noise floor.
 let simTimer = null;
 let simLastTime = 0;
+let simKind = 'fm'; // 'fm' | 'cw'
 const sim = { phase: 0, t: 0, cw1: 0, cw2: 0 };
 
 function gaussian() {
@@ -95,6 +96,7 @@ function gaussian() {
 
 function startSim() {
   sourceKind = 'sim';
+  simKind = 'fm';
   running = true;
   simLastTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
   sim.phase = 0; sim.t = 0; sim.cw1 = 0; sim.cw2 = 0;
@@ -103,7 +105,7 @@ function startSim() {
 }
 
 function simTick() {
-  if (!running || sourceKind !== 'sim') return;
+  if (!running || sourceKind !== 'sim' || simKind !== 'fm') return;
   const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
   let count = Math.round((sampleRate * (now - simLastTime)) / 1000);
   simLastTime = now;
@@ -135,6 +137,91 @@ function simTick() {
       q += noiseAmp * gaussian();
       blk[2 * s] = i; blk[2 * s + 1] = q;
       sim.t++;
+    }
+    feed(blk, take);
+    produced += take;
+  }
+}
+
+// ---------------- Simulated CW (Morse) source ----------------
+// A keyed carrier at band centre sending a looping Morse message. With CW mode
+// the BFO turns it into clean tone "beeps"; selecting CW + this source is the
+// no-hardware way to hear Morse.
+const MORSE = {
+  A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
+  I: '..', J: '.---', K: '-.-', L: '.-..', M: '--', N: '-.', O: '---', P: '.--.',
+  Q: '--.-', R: '.-.', S: '...', T: '-', U: '..-', V: '...-', W: '.--', X: '-..-',
+  Y: '-.--', Z: '--..', 0: '-----', 1: '.----', 2: '..---', 3: '...--', 4: '....-',
+  5: '.....', 6: '-....', 7: '--...', 8: '---..', 9: '----.', '/': '-..-.', '=': '-...-',
+  '.': '.-.-.-', ',': '--..--', '?': '..--..',
+};
+const CW_MSG = 'CQ DE TAUASA K';
+const CW_WPM = 18;
+
+// Build an on/off schedule in dot-units (dot=1, dash=3, intra=1, letter=3, word=7).
+function buildMorseSchedule(msg) {
+  const seq = [];
+  const words = msg.toUpperCase().split(' ');
+  for (let w = 0; w < words.length; w++) {
+    const word = words[w];
+    for (let c = 0; c < word.length; c++) {
+      const code = MORSE[word[c]];
+      if (!code) continue;
+      for (let s = 0; s < code.length; s++) {
+        seq.push({ on: true, units: code[s] === '-' ? 3 : 1 });
+        seq.push({ on: false, units: 1 }); // intra-character gap
+      }
+      seq.pop();
+      seq.push({ on: false, units: 3 }); // letter gap
+    }
+    seq.pop();
+    seq.push({ on: false, units: 7 }); // word gap
+  }
+  return seq;
+}
+
+const cwSim = { sched: null, idx: 0, remain: 0, env: 0, target: 0, unit: 0 };
+
+function startSimCw() {
+  sourceKind = 'sim';
+  simKind = 'cw';
+  running = true;
+  simLastTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  cwSim.sched = buildMorseSchedule(CW_MSG + '  ');
+  cwSim.idx = 0; cwSim.remain = 0; cwSim.env = 0; cwSim.target = 0;
+  cwSim.unit = Math.max(1, Math.round((sampleRate * 1.2) / CW_WPM));
+  status('Simulated CW — sending "' + CW_MSG + '" in Morse. Use CW mode + Audio.');
+  simTimer = setInterval(simTickCw, 50);
+}
+
+function simTickCw() {
+  if (!running || simKind !== 'cw') return;
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  let count = Math.round((sampleRate * (now - simLastTime)) / 1000);
+  simLastTime = now;
+  if (count <= 0) return;
+  if (count > sampleRate * 0.25) count = Math.round(sampleRate * 0.25);
+
+  const carrier = 0.35;
+  const noiseAmp = 0.0016;
+  const smooth = Math.exp(-1 / (0.004 * sampleRate)); // ~4 ms keying ramp (no clicks)
+
+  let produced = 0;
+  while (produced < count) {
+    const take = Math.min(fftSize, count - produced);
+    const blk = new Float32Array(take * 2);
+    for (let s = 0; s < take; s++) {
+      if (cwSim.remain <= 0) {
+        const el = cwSim.sched[cwSim.idx];
+        cwSim.idx = (cwSim.idx + 1) % cwSim.sched.length;
+        cwSim.remain = el.units * cwSim.unit;
+        cwSim.target = el.on ? 1 : 0;
+      }
+      cwSim.remain--;
+      cwSim.env = cwSim.target + (cwSim.env - cwSim.target) * smooth;
+      const a = carrier * cwSim.env;
+      blk[2 * s] = a + noiseAmp * gaussian();   // carrier at DC (band centre)
+      blk[2 * s + 1] = noiseAmp * gaussian();
     }
     feed(blk, take);
     produced += take;
@@ -235,6 +322,9 @@ self.onmessage = (ev) => {
       if (typeof m.gainTenthsDb === 'number') gainTenthsDb = m.gainTenthsDb;
       demod.setAudioRate(audioRate);
       demod.setMode(mode);
+      if (typeof m.cwPitch === 'number' || typeof m.cwBandwidth === 'number') {
+        demod.setCwParams(m.cwPitch || 0, m.cwBandwidth || 0);
+      }
       reconfigure();
       break;
     case 'audioRate':
@@ -247,6 +337,7 @@ self.onmessage = (ev) => {
       centerFreq = m.centerFreq || centerFreq;
       reconfigure();
       if (m.source === 'ws') startWs(m.wsUrl);
+      else if (m.source === 'simcw') startSimCw();
       else startSim();
       break;
     case 'stop':
@@ -265,6 +356,9 @@ self.onmessage = (ev) => {
     case 'mode':
       mode = m.mode;
       demod.setMode(mode);
+      break;
+    case 'cw':
+      demod.setCwParams(m.pitch || 0, m.bandwidth || 0);
       break;
     case 'audio':
       audioEnabled = !!m.on;

@@ -5,7 +5,7 @@
  */
 'use strict';
 
-const REPO_URL = 'https://github.com/tauasa/rtlsdr-pwa';
+const REPO_URL = 'https://github.com/tauasa/rtlsdr-fx';
 
 // ---- waterfall palettes (mirrors the desktop Palette presets) ----
 const PALETTES = {
@@ -79,6 +79,7 @@ const els = {};
  'volume','connectBtn','status','readout','spectrum','waterfall',
  'settingsBtn','aboutBtn','installBtn','settingsModal','aboutModal',
  'paletteSel','palettePreview','traceColor','peakColor','minDb','maxDb',
+ 'cwPitch','cwBandwidth','cwPitchVal','cwBandwidthVal',
  'settingsClose','aboutClose','resetColors','repoLink'].forEach((id) => els[id] = $(id));
 
 // ---- worker ----
@@ -107,6 +108,8 @@ function initWorker() {
     mode: els.mode.value,
     autoGain: els.autoGain.checked,
     gainTenthsDb: Math.round(parseFloat(els.gain.value) * 10),
+    cwPitch: parseInt(els.cwPitch.value, 10),
+    cwBandwidth: parseInt(els.cwBandwidth.value, 10),
   });
 }
 
@@ -320,6 +323,11 @@ function closeModal(m) { m.classList.remove('open'); }
 function wireEvents() {
   els.sourceSel.addEventListener('change', () => {
     els.wsRow.style.display = els.sourceSel.value === 'ws' ? '' : 'none';
+    if (els.sourceSel.value === 'simcw') {
+      els.mode.value = 'CW';
+      worker.postMessage({ type: 'mode', mode: 'CW' });
+      updateReadout();
+    }
   });
 
   els.connectBtn.addEventListener('click', () => state.connected ? disconnect() : connect());
@@ -363,11 +371,19 @@ function wireEvents() {
   els.peakColor.addEventListener('input', () => state.peakColor = els.peakColor.value);
   els.minDb.addEventListener('input', () => { state.minDb = parseFloat(els.minDb.value); });
   els.maxDb.addEventListener('input', () => { state.maxDb = parseFloat(els.maxDb.value); });
+  const sendCw = () => {
+    els.cwPitchVal.textContent = els.cwPitch.value + ' Hz';
+    els.cwBandwidthVal.textContent = els.cwBandwidth.value + ' Hz';
+    worker.postMessage({ type: 'cw', pitch: parseInt(els.cwPitch.value, 10), bandwidth: parseInt(els.cwBandwidth.value, 10) });
+  };
+  els.cwPitch.addEventListener('input', sendCw);
+  els.cwBandwidth.addEventListener('input', sendCw);
   els.resetColors.addEventListener('click', () => {
     state.traceColor = '#50c8ff'; state.peakColor = '#5f697d'; state.palette = 'Classic';
     state.minDb = -100; state.maxDb = 0; state.lut = buildLut('Classic');
     els.traceColor.value = '#50c8ff'; els.peakColor.value = '#5f697d'; els.paletteSel.value = 'Classic';
     els.minDb.value = -100; els.maxDb.value = 0; drawPalettePreview();
+    els.cwPitch.value = 700; els.cwBandwidth.value = 300; sendCw();
   });
 
   // about

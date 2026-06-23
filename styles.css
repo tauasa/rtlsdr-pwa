@@ -144,6 +144,8 @@ input[type="color"] {
   box-shadow: 0 18px 50px #00000080;
 }
 .card h2 { margin: 0 0 14px; font-size: 16px; }
+.card h2.section-h { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); }
+.setting .val { color: var(--muted); font-family: var(--mono); font-size: 11px; margin-left: 6px; }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .setting label { color: #c7cedb; font-size: 13px; }
 .palette-wrap { display: flex; align-items: center; gap: 10px; }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>rtlsdr-pwa — web receiver</title>
+  <title>rtlsdr-fx — web receiver</title>
   <meta name="description" content="A lightweight RTL-SDR receiver with live spectrum, waterfall, and audio — in the browser." />
   <meta name="theme-color" content="#0b0e14" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -15,7 +15,7 @@
   <header class="appbar">
     <div class="brand">
       <span class="logo" aria-hidden="true"></span>
-      <span class="title">rtlsdr <span class="fx">pwa</span></span>
+      <span class="title">rtlsdr<span class="fx">·fx</span></span>
       <span class="sub">web receiver</span>
     </div>
     <div class="appbar-actions">
@@ -30,6 +30,7 @@
       <span>Source</span>
       <select id="sourceSel">
         <option value="sim" selected>Simulated</option>
+        <option value="simcw">Simulated (CW)</option>
         <option value="ws">RTL-TCP (WebSocket)</option>
       </select>
     </label>
@@ -67,6 +68,7 @@
         <option value="WFM" selected>Wideband FM</option>
         <option value="NFM">Narrowband FM</option>
         <option value="AM">AM</option>
+        <option value="CW">CW (Morse)</option>
       </select>
     </label>
     <label class="field">
@@ -128,6 +130,15 @@
         <label for="maxDb">Ceiling (dB)</label>
         <input id="maxDb" type="range" min="-30" max="20" step="1" value="0" />
       </div>
+      <h2 class="section-h">CW</h2>
+      <div class="setting">
+        <label for="cwPitch">Pitch <span id="cwPitchVal" class="val">700 Hz</span></label>
+        <input id="cwPitch" type="range" min="300" max="1000" step="10" value="700" />
+      </div>
+      <div class="setting">
+        <label for="cwBandwidth">Filter width <span id="cwBandwidthVal" class="val">300 Hz</span></label>
+        <input id="cwBandwidth" type="range" min="100" max="1000" step="10" value="300" />
+      </div>
       <div class="card-actions">
         <button id="resetColors" class="ghost">Reset to defaults</button>
         <button id="settingsClose" class="primary">Close</button>
@@ -138,9 +149,9 @@
   <!-- About -->
   <div id="aboutModal" class="modal">
     <div class="card" role="dialog" aria-modal="true" aria-label="About">
-      <h2 class="about-name">rtlsdr·pwa</h2>
+      <h2 class="about-name">rtlsdr·fx</h2>
       <p class="about-tag">Lightweight RTL-SDR receiver — spectrum, waterfall &amp; audio, in the browser.</p>
-      <p class="about-meta">RTLSDR Progressive Web App · Version 1.0.0</p>
+      <p class="about-meta">Version 1.0.0 · Progressive Web App</p>
       <p class="about-meta">Copyright © 2026 Tauasa Timoteo · MIT License</p>
       <p><a id="repoLink" class="link" target="_blank" rel="noopener">repository</a></p>
       <p class="about-note">Browsers can't open raw TCP, so real hardware streams via a

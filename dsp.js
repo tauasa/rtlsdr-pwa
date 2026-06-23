@@ -179,9 +179,25 @@
     }
   }
 
-  // ---- WFM / NFM / AM demodulator -> mono audio at a target rate ----
-  const MODES = ['WFM', 'NFM', 'AM'];
-  const MODE_LABELS = { WFM: 'Wideband FM', NFM: 'Narrowband FM', AM: 'AM' };
+  // ---- RBJ biquad band-pass (constant 0 dB peak gain), normalised coeffs ----
+  function makeBandpass(f0, bw, fs) {
+    const w0 = (2 * Math.PI * f0) / fs;
+    const Q = Math.max(0.5, f0 / Math.max(1, bw));
+    const alpha = Math.sin(w0) / (2 * Q);
+    const cosw = Math.cos(w0);
+    const a0 = 1 + alpha;
+    return {
+      b0: alpha / a0,
+      b1: 0,
+      b2: -alpha / a0,
+      a1: (-2 * cosw) / a0,
+      a2: (1 - alpha) / a0,
+    };
+  }
+
+  // ---- WFM / NFM / AM / CW demodulator -> mono audio at a target rate ----
+  const MODES = ['WFM', 'NFM', 'AM', 'CW'];
+  const MODE_LABELS = { WFM: 'Wideband FM', NFM: 'Narrowband FM', AM: 'AM', CW: 'CW (Morse)' };
   const IF_TARGET = 240000;
 
   class Demodulator {
@@ -189,6 +205,8 @@
       this.audioRate = audioRate || 48000;
       this.mode = 'WFM';
       this.inputRate = 0;
+      this.cwPitch = 700;      // BFO / sidetone pitch (Hz)
+      this.cwBandwidth = 300;  // CW filter bandwidth (Hz)
     }
     setAudioRate(rate) {
       this.audioRate = rate;
@@ -201,6 +219,12 @@
       }
     }
     getMode() { return this.mode; }
+
+    setCwParams(pitch, bandwidth) {
+      if (pitch > 0) this.cwPitch = pitch;
+      if (bandwidth > 0) this.cwBandwidth = bandwidth;
+      if (this.inputRate > 0) this.configure(this.inputRate);
+    }
 
     configure(inputRate) {
       this.inputRate = inputRate;
@@ -217,6 +241,11 @@
       } else if (this.mode === 'NFM') {
         audioCutHz = 3400;
         this.fmGain = this.ifRate / (2 * Math.PI * 5000);
+        this.useDeemph = false;
+      } else if (this.mode === 'CW') {
+        // pass the pitch tone (it is created by the BFO mix below)
+        audioCutHz = Math.min(this.audioRate * 0.45, this.cwPitch + this.cwBandwidth + 400);
+        this.fmGain = 1;
         this.useDeemph = false;
       } else {
         audioCutHz = 4500;
@@ -238,6 +267,15 @@
 
       this.lastI = 0; this.lastQ = 0;
       this.dcState = 0; this.amDc = 0; this.deemphState = 0;
+
+      // CW: a BFO rotator at the IF rate shifts a centre carrier up to the pitch,
+      // and a band-pass at the audio rate makes the tight CW filter.
+      const ncoInc = (2 * Math.PI * this.cwPitch) / this.ifRate;
+      this.cwCosInc = Math.cos(ncoInc);
+      this.cwSinInc = Math.sin(ncoInc);
+      this.cwOscR = 1; this.cwOscI = 0; this.cwOscN = 0;
+      this.cwbp = makeBandpass(this.cwPitch, this.cwBandwidth, this.audioRate);
+      this.cwX1 = 0; this.cwX2 = 0; this.cwY1 = 0; this.cwY2 = 0;
 
       const ifMax = this.front.maxOutput(1 << 15);
       this.ifBuf = new Float32Array(ifMax * 2);
@@ -268,6 +306,22 @@
           this.amDc += 0.0005 * (env - this.amDc);
           demodBuf[k] = env - this.amDc;
         }
+      } else if (this.mode === 'CW') {
+        // mix up by the pitch (centre carrier -> audible tone) and take the real part
+        let oR = this.cwOscR, oI = this.cwOscI, nn = this.cwOscN;
+        const cI = this.cwCosInc, sI = this.cwSinInc;
+        for (let k = 0; k < ifCount; k++) {
+          const i = ifBuf[2 * k], q = ifBuf[2 * k + 1];
+          demodBuf[k] = i * oR - q * oI; // Re{(i + jq) * e^{j theta}}
+          const nR = oR * cI - oI * sI;
+          oI = oR * sI + oI * cI;
+          oR = nR;
+          if ((++nn & 1023) === 0) {       // periodic renormalise to fight drift
+            const m = Math.sqrt(oR * oR + oI * oI) || 1;
+            oR /= m; oI /= m;
+          }
+        }
+        this.cwOscR = oR; this.cwOscI = oI; this.cwOscN = nn;
       } else {
         let lastI = this.lastI, lastQ = this.lastQ, dc = this.dcState;
         const g = this.fmGain;
@@ -312,6 +366,18 @@
           outBuf[k] = s;
         }
         this.deemphState = s;
+      }
+
+      if (this.mode === 'CW') {
+        const bp = this.cwbp;
+        let x1 = this.cwX1, x2 = this.cwX2, y1 = this.cwY1, y2 = this.cwY2;
+        for (let k = 0; k < outCount; k++) {
+          const x0 = outBuf[k];
+          const y0 = bp.b0 * x0 + bp.b1 * x1 + bp.b2 * x2 - bp.a1 * y1 - bp.a2 * y2;
+          x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+          outBuf[k] = y0 * 2.0; // makeup for the narrow filter + real-part halving
+        }
+        this.cwX1 = x1; this.cwX2 = x2; this.cwY1 = y1; this.cwY2 = y2;
       }
 
       return outBuf.slice(0, outCount);
