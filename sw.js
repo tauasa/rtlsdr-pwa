@@ -2,7 +2,7 @@
  * rtlsdr-pwa service worker — cache-first app shell so the Simulated receiver
  * works fully offline once installed. Copyright (c) 2026 Tauasa Timoteo. MIT.
  */
-const CACHE = 'rtlsdr-fx-v1';
+const CACHE = 'rtlsdr-pwa-v1';
 const ASSETS = [
   './',
   './index.html',

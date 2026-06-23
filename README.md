@@ -1,4 +1,4 @@
-# rtlsdr-fx — web receiver (PWA)
+# rtlsdr-pwa — web receiver (PWA)
 
 A browser port of the [rtlsdr-fx](https://github.com/tauasa/rtlsdr-fx) desktop
 receiver: live **spectrum**, scrolling **waterfall**, and **WFM / NFM / AM audio**,

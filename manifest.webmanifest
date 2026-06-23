@@ -1,6 +1,6 @@
 {
-  "name": "rtlsdr-fx — web receiver",
-  "short_name": "rtlsdr-fx",
+  "name": "rtlsdr-pwa — web receiver",
+  "short_name": "rtlsdr-pwa",
   "description": "A lightweight RTL-SDR receiver with live spectrum, waterfall, and audio, running in the browser.",
   "start_url": "./index.html",
   "scope": "./",
